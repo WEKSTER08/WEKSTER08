@@ -1,4 +1,5 @@
 -- VoxVault core schema (Supabase / PostgreSQL + pgvector)
+-- NOTE: this schema is for the OPT-IN cloud replica only. The default store is per-device SQLite (see docs/adr-001-local-first.md).
 create extension if not exists vector;
 create extension if not exists pgcrypto;
 

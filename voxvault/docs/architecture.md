@@ -1,5 +1,7 @@
 # Architecture
 
+> **Update:** storage is now local-first (see `adr-001-local-first.md`). The Postgres box below is the *opt-in cloud replica*, not the default store. Each device keeps its own SQLite source of truth.
+
 ```
  Mobile app ──audio──► POST /recordings ──► queue ──► worker
                                                    │

@@ -4,7 +4,7 @@ Voice notes that file themselves, and that Claude/ChatGPT can search **and reorg
 
 - **Capture:** mobile app (Flutter / React Native) records, caches and uploads audio.
 - **Ingest:** Whisper/Deepgram → GPT-4o-mini structured output `{folder, subfolder, title, clean_markdown, confidence}` → upsert folders → save note → embed (`text-embedding-3-small`, 1536-d).
-- **Store:** Supabase Postgres + pgvector, strict Folder → Subfolder → Note tree, RLS per user.
+- **Store (local-first):** each device owns its notes in SQLite + `sqlite-vec` + FTS5. Optional E2EE sync between device replicas through a relay that never sees plaintext. Postgres (`db/schema.sql`) is only for the opt-in cloud replica. See `docs/adr-001-local-first.md`.
 - **Bridge:** REST + OpenAPI (Custom GPT Actions) **and** a remote MCP server with OAuth 2.1 (Claude connectors, ChatGPT apps). Both sit on one service layer.
 
 ## Layout
@@ -13,6 +13,7 @@ Voice notes that file themselves, and that Claude/ChatGPT can search **and reorg
 |---|---|
 | `docs/market-research.md` | Competitive landscape, market signals, verdict |
 | `docs/architecture.md` | Pipelines and MCP tool design |
+| `docs/adr-001-local-first.md` | Federated/local-first storage and sync decision |
 | `db/schema.sql` | Postgres/pgvector schema, RLS, `match_notes()` |
 | `api/openapi.yaml` | REST contract (also the source for MCP tool definitions) |
 
