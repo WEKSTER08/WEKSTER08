@@ -1,0 +1,152 @@
+openapi: 3.1.0
+info:
+  title: VoxVault API
+  version: 0.1.0
+  description: >
+    System-of-record API for voice-captured, auto-indexed notes.
+    The same service layer backs the remote MCP server (Claude / ChatGPT connectors)
+    and Custom GPT Actions.
+servers:
+  - url: https://api.voxvault.example/v1
+security:
+  - oauth2: [notes.read]
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.voxvault.example/authorize
+          tokenUrl: https://auth.voxvault.example/token
+          scopes:
+            notes.read: Read and search notes
+            notes.write: Create and edit notes
+            folders.write: Create folders and move notes
+  schemas:
+    Folder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        parent_id: { type: [string, "null"], format: uuid }
+    Note:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        body_md: { type: string }
+        folder_id: { type: [string, "null"], format: uuid }
+        status: { type: string, enum: [inbox, filed] }
+        created_at: { type: string, format: date-time }
+    SearchHit:
+      allOf:
+        - $ref: '#/components/schemas/Note'
+        - type: object
+          properties:
+            similarity: { type: number }
+paths:
+  /notes:
+    get:
+      operationId: searchNotes
+      summary: Semantic search (or list) the user's notes
+      parameters:
+        - { name: query, in: query, schema: { type: string } }
+        - { name: folder_id, in: query, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, default: 10, maximum: 50 } }
+      responses:
+        '200':
+          description: Matching notes
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/SearchHit' } }
+    post:
+      operationId: createNote
+      summary: Create a text note (auto-filed unless folder_id is given)
+      security: [{ oauth2: [notes.write] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body_md]
+              properties:
+                title: { type: string }
+                body_md: { type: string }
+                folder_id: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } }
+  /notes/{id}:
+    get:
+      operationId: getNote
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          description: The note
+          content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } }
+  /notes/{id}/reindex:
+    patch:
+      operationId: moveNote
+      summary: Move a note to another folder/subfolder
+      security: [{ oauth2: [folders.write] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folder_id]
+              properties:
+                folder_id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Moved
+          content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } }
+  /folders:
+    get:
+      operationId: listFolders
+      responses:
+        '200':
+          description: Folder tree (flat list with parent_id)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Folder' } }
+    post:
+      operationId: createFolder
+      security: [{ oauth2: [folders.write] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                parent_id: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Folder' } } }
+  /recordings:
+    post:
+      operationId: uploadRecording
+      summary: Upload audio; transcription and auto-filing run asynchronously
+      security: [{ oauth2: [notes.write] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio: { type: string, format: binary }
+      responses:
+        '202':
+          description: Accepted; returns the pending note id
+          content:
+            application/json:
+              schema: { type: object, properties: { note_id: { type: string, format: uuid } } }
