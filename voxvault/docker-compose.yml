@@ -1,0 +1,24 @@
+# Local sync test bench.
+#   relay      -> http://localhost:8787  (direct)
+#   toxiproxy  -> http://localhost:8788  (same relay, through a fault injector)
+# Point devices at 8788 and use scripts/network.sh to add latency, drop connections, etc.
+services:
+  relay:
+    build: ./apps/relay
+    ports: ["8787:8787"]
+    volumes: [relay-data:/data]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      retries: 10
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    volumes: ["./scripts/toxiproxy.json:/config/toxiproxy.json:ro"]
+    ports: ["8474:8474", "8788:8788"]
+    depends_on:
+      relay: { condition: service_healthy }
+
+volumes:
+  relay-data:

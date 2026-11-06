@@ -1,0 +1,4 @@
+node_modules/
+.devices/
+*.db
+*.db-*

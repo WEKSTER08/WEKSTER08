@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Run the VoxVault test device CLI. Example: scripts/vox --dir .devices/phone ls
+exec node --disable-warning=ExperimentalWarning "$(dirname "$0")/../apps/cli-device/src/cli.ts" "$@"

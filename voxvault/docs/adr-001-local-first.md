@@ -28,7 +28,7 @@ Text is cheap, but **the embeddings take more space than the text**. Default to 
 - **DB:** SQLite (`folders`, `notes`, `note_events`). Same shape as `db/schema.sql`.
 - **Vector search:** `sqlite-vec` (brute-force search is fine up to ~100k notes on a phone).
 - **Full-text search:** SQLite FTS5 for keyword + hybrid search.
-- **Sync engine options:** cr-sqlite (CRDT SQLite), Automerge, or PowerSync/ElectricSQL. Choose one that supports **tree move** semantics (see risks).
+- **Sync engine:** a small custom change log in `packages/sync-core` (last-writer-wins fields + replayed folder moves). Chosen over PowerSync/ElectricSQL (server-authoritative Postgres), cr-sqlite (barely maintained) and Automerge (more than the data model needs). Revisit Automerge if rich-text merging of note bodies becomes important.
 
 ## Sync model
 
